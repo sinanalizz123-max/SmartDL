@@ -1,15 +1,18 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-MAX_TRIES=5
-COUNT=0
+ATTEMPT=0
+CHECKPOINT_INTERVAL=5
 
-while [ $COUNT -lt $MAX_TRIES ]; do
+cd /data/data/com.termux/files/home/SmartDL || exit 1
+
+while true; do
   echo "=============================="
-  echo "🚀 Attempt $COUNT"
+  echo "🚀 Attempt $ATTEMPT"
   echo "=============================="
 
-  git add .
-  git commit -m "auto-fix attempt $COUNT" || echo "Nothing to commit"
+  git add -A
+  git reset ci-error.log .write_test_tmp 2>/dev/null
+  git commit -m "auto-fix attempt $ATTEMPT" || echo "Nothing to commit"
   git push origin main
 
   echo "⏳ Waiting for workflow to start..."
@@ -18,18 +21,18 @@ while [ $COUNT -lt $MAX_TRIES ]; do
   RUN_ID=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 
   if [ -z "$RUN_ID" ]; then
-    echo "❌ Could not detect workflow run."
-    exit 1
+    echo "❌ No workflow detected. Waiting 20s..."
+    sleep 20
+    continue
   fi
 
   echo "🔍 Monitoring run $RUN_ID"
 
-  # Wait while build is in progress
   while true; do
     STATUS=$(gh run view $RUN_ID --json status --jq '.status')
 
     if [ "$STATUS" = "in_progress" ] || [ "$STATUS" = "queued" ]; then
-      echo "⏳ Build still running... waiting 10 seconds"
+      echo "⏳ Build running... waiting 10s"
       sleep 10
     else
       break
@@ -52,14 +55,27 @@ while [ $COUNT -lt $MAX_TRIES ]; do
   Read README_AI.md fully.
   Understand architecture and constraints.
   Read ci-error.log carefully.
-  Identify only build or Gradle errors.
-  Fix only necessary files.
-  Do not refactor unrelated logic.
-  Preserve architecture and storage rules.
+  Fix only build or Gradle errors.
+  Do not refactor unrelated files.
+  Preserve architecture.
   "
 
-  COUNT=$((COUNT+1))
-done
+  ATTEMPT=$((ATTEMPT+1))
 
-echo "❌ Max retries reached. Manual review required."
-exit 1
+  # 🔥 Checkpoint pause every 5 attempts
+  if (( ATTEMPT % CHECKPOINT_INTERVAL == 0 )); then
+    echo "⚠️  $ATTEMPT attempts reached."
+    echo "Pausing for 60 seconds..."
+    sleep 60
+
+    echo "Continue automation? (y/n) [default: y in 20s]"
+    read -t 20 RESPONSE
+
+    if [ "$RESPONSE" = "n" ]; then
+      echo "🛑 Automation stopped by user."
+      exit 0
+    else
+      echo "▶ Continuing..."
+    fi
+  fi
+done
