@@ -4,9 +4,10 @@ import com.example.smartdl.data.db.DownloadChunkEntity
 import com.example.smartdl.data.db.DownloadDao
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -29,9 +30,10 @@ class ParallelDownloader(
         downloadId: Long,
         url: String,
         destFile: File,
+        headers: Map<String, String>,
         onProgress: suspend (downloaded: Long, total: Long, speedBytesPerSec: Long) -> Unit
     ): Result<Unit> = try {
-        val probe = probe(url)
+        val probe = probe(url, headers)
         val chunks = prepareChunks(downloadId, probe)
         if (probe.totalBytes > 0) {
             RandomAccessFile(destFile, "rw").use { raf ->
@@ -45,7 +47,7 @@ class ParallelDownloader(
         coroutineScope {
             chunks.forEach { chunk ->
                 launch {
-                    downloadChunk(url, destFile, chunk, probe, totalDownloaded, speedTracker, onProgress)
+                    downloadChunk(url, destFile, chunk, probe, headers, totalDownloaded, speedTracker, onProgress)
                 }
             }
         }
@@ -57,15 +59,15 @@ class ParallelDownloader(
         Result.failure(e)
     }
 
-    private suspend fun probe(url: String): ProbeResult {
-        val head = Request.Builder().url(url).head().build()
+    private suspend fun probe(url: String, headers: Map<String, String>): ProbeResult {
+        val head = Request.Builder().url(url).head().headers(Headers.of(headers)).build()
         try {
             client.newCall(head).execute().use { response ->
                 if (response.isSuccessful) {
                     val total = response.header("Content-Length")?.toLongOrNull() ?: -1L
                     val acceptRanges = response.header("Accept-Ranges")?.contains("bytes", ignoreCase = true) == true
                     if (acceptRanges) {
-                        val rangeProbe = rangeProbe(url)
+                        val rangeProbe = rangeProbe(url, headers)
                         return rangeProbe ?: ProbeResult(totalBytes = total, supportsRanges = false)
                     }
                     return ProbeResult(totalBytes = total, supportsRanges = false)
@@ -75,12 +77,13 @@ class ParallelDownloader(
             // Fall through to range probe.
         }
 
-        return rangeProbe(url) ?: ProbeResult(totalBytes = -1L, supportsRanges = false)
+        return rangeProbe(url, headers) ?: ProbeResult(totalBytes = -1L, supportsRanges = false)
     }
 
-    private fun rangeProbe(url: String): ProbeResult? {
+    private fun rangeProbe(url: String, headers: Map<String, String>): ProbeResult? {
         val request = Request.Builder()
             .url(url)
+            .headers(Headers.of(headers))
             .header("Range", "bytes=0-0")
             .build()
         return try {
@@ -151,6 +154,7 @@ class ParallelDownloader(
         destFile: File,
         chunk: DownloadChunkEntity,
         probe: ProbeResult,
+        headers: Map<String, String>,
         totalDownloaded: AtomicLong,
         speedTracker: SpeedTracker,
         onProgress: suspend (downloaded: Long, total: Long, speedBytesPerSec: Long) -> Unit
@@ -170,7 +174,7 @@ class ParallelDownloader(
                     return
                 }
 
-                val requestBuilder = Request.Builder().url(url)
+                val requestBuilder = Request.Builder().url(url).headers(Headers.of(headers))
                 if (probe.supportsRanges) {
                     requestBuilder.header("Range", "bytes=$rangeStart-$rangeEnd")
                 }

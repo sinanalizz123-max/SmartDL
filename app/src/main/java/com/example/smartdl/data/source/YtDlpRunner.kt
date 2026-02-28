@@ -18,17 +18,23 @@ class YtDlpRunner(
         downloadId: Long,
         url: String,
         outputDir: File,
+        cookiesFile: File?,
         onProgress: (percent: Int) -> Unit
     ): Result<Unit> {
         return try {
             val bin = ensureBinary()
-            val process = ProcessBuilder(
+            val args = mutableListOf(
                 bin.absolutePath,
                 "--no-playlist",
                 "-o",
-                File(outputDir, "%(title)s.%(ext)s").absolutePath,
-                url
+                File(outputDir, "dl_${downloadId}_%(title)s.%(ext)s").absolutePath
             )
+            if (cookiesFile != null && cookiesFile.exists()) {
+                args.addAll(listOf("--cookies", cookiesFile.absolutePath))
+            }
+            args.add(url)
+
+            val process = ProcessBuilder(args)
                 .redirectErrorStream(true)
                 .start()
 

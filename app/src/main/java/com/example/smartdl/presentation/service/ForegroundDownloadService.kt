@@ -15,10 +15,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.cancel
 
 class ForegroundDownloadService : Service() {
 
@@ -34,6 +34,9 @@ class ForegroundDownloadService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        kotlinx.coroutines.runBlocking {
+            (application as SmartDlApp).container.stopQueue()
+        }
         serviceScope.cancel()
     }
 
@@ -49,12 +52,11 @@ class ForegroundDownloadService : Service() {
     }
 
     private fun handleStart(intent: Intent) {
-        val urls = intent.getStringArrayListExtra(EXTRA_URLS).orEmpty()
-        val parallelism = intent.getIntExtra(EXTRA_PARALLELISM, 3)
+        val maxParallel = intent.getIntExtra(EXTRA_MAX_PARALLEL, 3)
         startForeground(NOTIFICATION_ID, buildNotification("Starting downloads"))
         serviceScope.launch {
             val app = application as SmartDlApp
-            app.container.startDownload(urls, parallelism)
+            app.container.startQueue(maxParallel)
         }
     }
 
@@ -179,15 +181,13 @@ class ForegroundDownloadService : Service() {
         private const val ACTION_PAUSE = "com.example.smartdl.action.PAUSE"
         private const val ACTION_RESUME = "com.example.smartdl.action.RESUME"
         private const val ACTION_CANCEL = "com.example.smartdl.action.CANCEL"
-        private const val EXTRA_URLS = "extra_urls"
-        private const val EXTRA_PARALLELISM = "extra_parallelism"
         private const val EXTRA_DOWNLOAD_ID = "extra_download_id"
+        private const val EXTRA_MAX_PARALLEL = "extra_max_parallel"
 
-        fun start(context: Context, urls: List<String>, parallelism: Int) {
+        fun start(context: Context, maxParallel: Int) {
             val intent = Intent(context, ForegroundDownloadService::class.java).apply {
                 action = ACTION_START
-                putStringArrayListExtra(EXTRA_URLS, ArrayList(urls))
-                putExtra(EXTRA_PARALLELISM, parallelism)
+                putExtra(EXTRA_MAX_PARALLEL, maxParallel)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)

@@ -5,7 +5,5 @@ import com.example.smartdl.domain.repository.DownloadRepository
 class PauseDownloadUseCase(
     private val repository: DownloadRepository
 ) {
-    suspend operator fun invoke(id: Long) {
-        repository.pauseDownload(id)
-    }
+    suspend operator fun invoke(id: Long) = repository.pauseDownload(id)
 }

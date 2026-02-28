@@ -2,8 +2,8 @@ package com.example.smartdl.domain.usecase
 
 import com.example.smartdl.domain.repository.DownloadRepository
 
-class CancelDownloadUseCase(
+class StopQueueUseCase(
     private val repository: DownloadRepository
 ) {
-    suspend operator fun invoke(id: Long) = repository.cancelDownload(id)
+    suspend operator fun invoke() = repository.stopQueue()
 }

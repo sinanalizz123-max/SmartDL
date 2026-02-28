@@ -4,7 +4,12 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [DownloadEntity::class, DownloadChunkEntity::class],
+    entities = [
+        DownloadEntity::class,
+        DownloadChunkEntity::class,
+        DomainHeaderEntity::class,
+        HistoryEntity::class
+    ],
     version = 1,
     exportSchema = false
 )
