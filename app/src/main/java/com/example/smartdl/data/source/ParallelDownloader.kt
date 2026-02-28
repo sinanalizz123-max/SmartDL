@@ -8,6 +8,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.Headers
+import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -60,7 +61,7 @@ class ParallelDownloader(
     }
 
     private suspend fun probe(url: String, headers: Map<String, String>): ProbeResult {
-        val head = Request.Builder().url(url).head().headers(Headers.of(headers)).build()
+        val head = Request.Builder().url(url).head().headers(headers.toHeaders()).build()
         try {
             client.newCall(head).execute().use { response ->
                 if (response.isSuccessful) {
@@ -83,7 +84,7 @@ class ParallelDownloader(
     private fun rangeProbe(url: String, headers: Map<String, String>): ProbeResult? {
         val request = Request.Builder()
             .url(url)
-            .headers(Headers.of(headers))
+            .headers(headers.toHeaders())
             .header("Range", "bytes=0-0")
             .build()
         return try {
@@ -174,7 +175,7 @@ class ParallelDownloader(
                     return
                 }
 
-                val requestBuilder = Request.Builder().url(url).headers(Headers.of(headers))
+                val requestBuilder = Request.Builder().url(url).headers(headers.toHeaders())
                 if (probe.supportsRanges) {
                     requestBuilder.header("Range", "bytes=$rangeStart-$rangeEnd")
                 }

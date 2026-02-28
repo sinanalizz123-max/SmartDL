@@ -297,7 +297,7 @@ class DownloadRepositoryImpl(
         return if (output != null) Result.success(output) else Result.failure(IOException("yt-dlp output not found"))
     }
 
-    private fun ensureTempFile(item: DownloadEntity): File {
+    private suspend fun ensureTempFile(item: DownloadEntity): File {
         val file = tempFileManager.tempFile(item.id, item.fileName)
         dao.updateTempPath(item.id, file.absolutePath, System.currentTimeMillis())
         return file
