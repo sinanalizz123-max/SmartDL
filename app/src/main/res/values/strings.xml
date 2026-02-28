@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">SmartDL</string>
+    <string name="hint_urls">Enter URLs (space, comma, or newline separated)</string>
+    <string name="start_download">Download</string>
+    <string name="parallelism">Parallelism</string>
+    <string name="status_idle">Idle</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="cancel">Cancel</string>
+</resources>
