@@ -5,6 +5,7 @@ import com.example.smartdl.data.db.DownloadDao
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -192,7 +193,7 @@ class ParallelDownloader(
                         var chunkDownloaded = localChunk.downloadedBytes
 
                         while (input.read(buffer).also { bytesRead = it } >= 0) {
-                            ensureActive()
+                            currentCoroutineContext().ensureActive()
                             raf.write(buffer, 0, bytesRead)
                             chunkDownloaded += bytesRead
                             val total = totalDownloaded.addAndGet(bytesRead.toLong())
