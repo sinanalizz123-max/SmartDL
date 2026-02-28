@@ -2,6 +2,7 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
 }
 
@@ -13,12 +14,12 @@ if (keystorePropsFile.exists()) {
 
 android {
     namespace = "com.example.smartdl"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.smartdl"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 34
         versionCode = (project.findProperty("VERSION_CODE") as String?)?.toInt() ?: 1
         versionName = project.findProperty("VERSION_NAME") as String? ?: "1.0.0"
     }
